@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Outfit:wght@400;700;900&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', sans-serif;
+}
+
+body {
+  background-color: #0a0a0a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  color: white;
+}
+
+#app {
+  position: relative;
+  border: 4px solid #333;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+  background: black;
+  overflow: hidden;
+}
+
+.health-container {
+  position: absolute;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 30px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+  z-index: 5;
+}
+
+.health-bar-wrapper {
+  position: relative;
+  width: 100%;
+  height: 35px;
+  background: rgba(255, 0, 0, 0.3);
+  border: 3px solid #eee;
+  overflow: hidden;
+}
+
+#player1Health,
+#player2Health {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(to right, #fbbf24, #f59e0b);
+  transition: width 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+#player1Health {
+  right: 0;
+}
+
+#player2Health {
+  left: 0;
+}
+
+#timer {
+  background: rgba(10, 10, 10, 0.9);
+  width: 120px;
+  height: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  border: 4px solid #eee;
+  font-family: 'Bangers', cursive;
+  font-size: 2.5rem;
+  margin: 0 10px;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+#startScreen,
+#restartContainer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  transition: opacity 0.5s ease;
+}
+
+.title {
+  font-family: 'Bangers', cursive;
+  font-size: 6rem;
+  letter-spacing: 4px;
+  text-shadow: 5px 5px 0 #3b82f6;
+  margin-bottom: 2rem;
+  text-align: center;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.btn {
+  padding: 15px 40px;
+  font-size: 1.8rem;
+  font-family: 'Bangers', cursive;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+}
+
+.btn:hover {
+  background: #2563eb;
+  transform: scale(1.1) rotate(-1deg);
+  box-shadow: 5px 5px 0 #fff;
+}
+
+#debugLog {
+  position: absolute;
+  top: 100px;
+  left: 30px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  pointer-events: none;
+  border-left: 3px solid #3b82f6;
+  z-index: 10;
+}

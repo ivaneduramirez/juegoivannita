@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UFC FIGHT NIGHT</title>
+</head>
+
+<body>
+  <div id="app">
+    <!-- UI Overlay -->
+    <div class="health-container">
+      <div class="health-bar-wrapper">
+        <div id="player1Health"></div>
+      </div>
+      <div id="timer">60</div>
+      <div class="health-bar-wrapper">
+        <div id="player2Health"></div>
+      </div>
+    </div>
+
+    <!-- Gameplay -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Overlays -->
+    <div id="startScreen">
+      <h1 class="title">UFC FIGHT NIGHT</h1>
+      <button class="btn" id="startButton">PELEAR</button>
+    </div>
+
+    <div id="restartContainer" style="display: none;">
+      <h1 id="displayText" class="title"></h1>
+      <button id="restartButton" class="btn">REYERTA DE NUEVO</button>
+    </div>
+
+    <div id="debugLog">Iniciando Octágono...</div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
