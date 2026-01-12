@@ -12,6 +12,7 @@ export class Game {
         this.timerId
         this.gameOver = false
         this.restartButton = document.getElementById('restartButton')
+        this.impact = null
 
         if (this.restartButton) {
             this.restartButton.addEventListener('click', () => {
@@ -50,40 +51,42 @@ export class Game {
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height)
 
         this.player1 = new Fighter({
-            position: { x: 150, y: 0 },
+            position: { x: 150, y: 20 },
             velocity: { x: 0, y: 0 },
             color: 'red',
             imageSrc: '/assets/michael_spritesheet.png',
             sheetCols: 2,
             sheetRows: 2,
-            scale: 0.7,
+            scale: 0.8,
             sprites: {
                 idle: { row: 0, col: 0 },
                 run: { row: 0, col: 0 },
-                jump: { row: 1, col: 0 },
-                fall: { row: 1, col: 0 },
+                jump: { row: 0, col: 0 },
+                fall: { row: 0, col: 0 },
                 attack: { row: 0, col: 1 },
-                takeHit: { row: 1, col: 0 }
+                attack2: { row: 1, col: 0 },
+                takeHit: { row: 1, col: 1, forceFlip: true }
             },
             context: this.context,
             offset: { x: 20, y: 0 }
         })
 
         this.player2 = new Fighter({
-            position: { x: 800, y: 0 },
+            position: { x: 800, y: 20 },
             velocity: { x: 0, y: 0 },
             color: 'blue',
             imageSrc: '/assets/chito_spritesheet.png',
             sheetCols: 2,
             sheetRows: 2,
-            scale: 0.7,
+            scale: 0.8,
             sprites: {
                 idle: { row: 0, col: 0 },
                 run: { row: 0, col: 0 },
-                jump: { row: 1, col: 0 },
-                fall: { row: 1, col: 0 },
+                jump: { row: 0, col: 0 },
+                fall: { row: 0, col: 0 },
                 attack: { row: 0, col: 1 },
-                takeHit: { row: 1, col: 0 }
+                attack2: { row: 1, col: 0 },
+                takeHit: { row: 1, col: 1, noFlip: true }
             },
             context: this.context,
             offset: { x: 20, y: 0 }
@@ -114,8 +117,8 @@ export class Game {
         this.player2.health = 100
         this.player1.dead = false
         this.player2.dead = false
-        this.player1.position = { x: 100, y: 0 }
-        this.player2.position = { x: 800, y: 0 }
+        this.player1.position = { x: 100, y: 20 }
+        this.player2.position = { x: 800, y: 20 }
         this.player1.framesCurrent = 0
         this.player2.framesCurrent = 0
 
@@ -187,9 +190,40 @@ export class Game {
             this.player2.velocity.y = -20
         }
 
-        // Update Fighters
-        this.player1.update()
-        this.player2.update()
+        // Update Fighters (draw order affects visibility when overlapping)
+        const p1 = this.player1
+        const p2 = this.player2
+        let first = p1
+        let second = p2
+
+        if (p1.isAttacking && !p2.isAttacking) {
+            first = p2
+            second = p1
+        } else if (p2.isAttacking && !p1.isAttacking) {
+            first = p1
+            second = p2
+        } else if (p1.position.x > p2.position.x) {
+            first = p2
+            second = p1
+        }
+
+        first.update()
+        second.update()
+
+        if (this.impact) {
+            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+            if (now < this.impact.until) {
+                this.context.save()
+                this.context.globalCompositeOperation = 'lighter'
+                this.context.fillStyle = 'rgba(255, 235, 140, 0.85)'
+                this.context.beginPath()
+                this.context.arc(this.impact.x, this.impact.y, 12, 0, Math.PI * 2)
+                this.context.fill()
+                this.context.restore()
+            } else {
+                this.impact = null
+            }
+        }
 
         // Physics: Body Collision (Pushing)
         // If neither is jumping effectively (close to ground), prevent x-overlap
@@ -213,13 +247,21 @@ export class Game {
                 // Collision detected
                 const p1Center = p1Left + this.player1.width / 2
                 const p2Center = p2Left + this.player2.width / 2
+                const overlap = Math.min(p1Right, p2Right) - Math.max(p1Left, p2Left)
+                const movingTowards =
+                    (this.player1.velocity.x > 0 && this.player2.velocity.x < 0) ||
+                    (this.player2.velocity.x > 0 && this.player1.velocity.x < 0)
 
-                if (p1Center < p2Center) {
-                    this.player1.position.x -= 5
-                    this.player2.position.x += 5
-                } else {
-                    this.player1.position.x += 5
-                    this.player2.position.x -= 5
+                // Only separate when actually pushing into each other or heavily overlapping
+                if (movingTowards || overlap > 20) {
+                    const push = Math.min(6, overlap / 2)
+                    if (p1Center < p2Center) {
+                        this.player1.position.x -= push
+                        this.player2.position.x += push
+                    } else {
+                        this.player1.position.x += push
+                        this.player2.position.x -= push
+                    }
                 }
             }
         }
@@ -232,6 +274,12 @@ export class Game {
             this.player1.isAttacking = false
             this.player2.takeHit()
             document.querySelector('#player2Health').style.width = this.player2.health + '%'
+            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+            this.impact = {
+                x: this.player1.attackBox.position.x + this.player1.attackBox.width / 2,
+                y: this.player1.attackBox.position.y + this.player1.attackBox.height / 2,
+                until: now + 120
+            }
         }
 
         if (
@@ -241,6 +289,12 @@ export class Game {
             this.player2.isAttacking = false
             this.player1.takeHit()
             document.querySelector('#player1Health').style.width = this.player1.health + '%'
+            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+            this.impact = {
+                x: this.player2.attackBox.position.x + this.player2.attackBox.width / 2,
+                y: this.player2.attackBox.position.y + this.player2.attackBox.height / 2,
+                until: now + 120
+            }
         }
 
         // End Game

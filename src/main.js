@@ -18,13 +18,10 @@ const game = new Game(canvas, c)
 // Start Screen Logic
 const startScreen = document.getElementById('startScreen')
 const startButton = document.getElementById('startButton')
-const debugLog = document.getElementById('debugLog')
-
 startButton.addEventListener('click', () => {
   startScreen.style.opacity = '0'
   setTimeout(() => {
     startScreen.style.display = 'none'
   }, 500)
   game.start()
-  if (debugLog) debugLog.innerHTML = 'Pelea Iniciada - ¡Suerte!'
 })

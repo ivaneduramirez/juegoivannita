@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test:e2e": "playwright test --headed",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^25.0.6",
     "vite": "^7.2.4"
   }
 }

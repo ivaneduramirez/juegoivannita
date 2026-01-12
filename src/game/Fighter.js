@@ -43,6 +43,9 @@ export class Fighter {
         this.dead = false
         this.isCoolingDown = false
         this.currSprite = null // Allow first switch to happen
+        this.attackSprite = 'attack'
+        this.hitStunUntil = 0
+        this.attackHoldUntil = 0
 
         // Immediately trigger idle state setup if sprites exist
         if (this.sprites) {
@@ -59,15 +62,75 @@ export class Fighter {
             ctx.drawImage(this.image, 0, 0)
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
             const data = imageData.data
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i]; const g = data[i + 1]; const b = data[i + 2];
-                // Thresholds
-                if (r > 225 && g > 225 && b > 225) {
+
+            // Calibrate background color (sample top-left area)
+            const candidates = []
+            const sampleLimit = Math.min(64, canvas.width, canvas.height)
+            for (let y = 4; y < sampleLimit; y += 8) {
+                for (let x = 4; x < sampleLimit; x += 8) {
+                    const idx = (y * canvas.width + x) * 4
+                    const r = data[idx]
+                    const g = data[idx + 1]
+                    const b = data[idx + 2]
+                    const max = Math.max(r, g, b)
+                    const min = Math.min(r, g, b)
                     const brightness = (r + g + b) / 3
-                    if (brightness > 230) {
-                        data[i + 3] = 0
-                    } else {
-                        data[i + 3] = 255 - (brightness - 225) * 5
+                    if (brightness > 30 && brightness < 245) {
+                        candidates.push({ r, g, b, brightness })
+                    }
+                }
+            }
+
+            let bgColor = null
+            if (candidates.length >= 10) {
+                // Background color: pick most common bucket
+                const buckets = new Map()
+                for (const c of candidates) {
+                    const key = `${Math.round(c.r / 16)},${Math.round(c.g / 16)},${Math.round(c.b / 16)}`
+                    buckets.set(key, (buckets.get(key) || 0) + 1)
+                }
+                let bestKey = null
+                let bestCount = 0
+                for (const [key, count] of buckets.entries()) {
+                    if (count > bestCount) {
+                        bestKey = key
+                        bestCount = count
+                    }
+                }
+                if (bestKey) {
+                    const [kr, kg, kb] = bestKey.split(',').map((v) => parseInt(v, 10) * 16)
+                    bgColor = { r: kr, g: kg, b: kb }
+                }
+
+            }
+
+            const nearBgColor = (r, g, b) => {
+                if (!bgColor) return false
+                const dr = r - bgColor.r
+                const dg = g - bgColor.g
+                const db = b - bgColor.b
+                return (dr * dr + dg * dg + db * db) < (60 * 60)
+            }
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i]
+                const g = data[i + 1]
+                const b = data[i + 2]
+                const max = Math.max(r, g, b)
+                const min = Math.min(r, g, b)
+                const brightness = (r + g + b) / 3
+
+                // Remove only the sampled background color (e.g. violet)
+                if (nearBgColor(r, g, b)) {
+                    data[i + 3] = 0
+                } else if (bgColor) {
+                    const dr = r - bgColor.r
+                    const dg = g - bgColor.g
+                    const db = b - bgColor.b
+                    const dist2 = dr * dr + dg * dg + db * db
+                    // Feather edge to reduce halos near background
+                    if (dist2 < (90 * 90)) {
+                        const alpha = Math.min(255, Math.max(0, (dist2 - (60 * 60)) / ((90 * 90) - (60 * 60)) * 255))
+                        data[i + 3] = Math.min(data[i + 3], alpha)
                     }
                 }
             }
@@ -83,12 +146,6 @@ export class Fighter {
     draw() {
         const img = this.transparentLoaded ? this.processedImage : this.image
 
-        // Debug info
-        const dbg = document.getElementById('debugLog')
-        if (dbg && this.framesElapsed % 60 === 0) {
-            dbg.innerHTML = `P1: ${this.currSprite} | HP: ${this.health}`
-        }
-
         if (!img || !img.complete || img.naturalWidth === 0) {
             this.context.fillStyle = this.color
             this.context.fillRect(this.position.x, this.position.y, this.width, this.height)
@@ -99,11 +156,17 @@ export class Fighter {
         const frameWidth = img.width / this.sheetCols
         const frameHeight = img.height / rows
 
-        const facingRight = !this.enemy || this.position.x < this.enemy.position.x
+        const facingRightDefault = !this.enemy || this.position.x < this.enemy.position.x
+        const spriteMeta = (this.sprites && this.currSprite) ? this.sprites[this.currSprite] : null
+        const noFlip = spriteMeta?.noFlip
+        const forceFlip = spriteMeta?.forceFlip
+        let shouldFlip = !facingRightDefault
+        if (noFlip) shouldFlip = false
+        if (forceFlip) shouldFlip = true
 
         this.context.save()
 
-        if (!facingRight) {
+        if (shouldFlip) {
             this.context.translate(this.position.x + this.width / 2, this.position.y)
             this.context.scale(-1, 1)
             this.context.translate(-(this.position.x + this.width / 2), -this.position.y)
@@ -177,14 +240,17 @@ export class Fighter {
         // Sync animation state
         if (this.sprites && !this.dead) {
             if (this.currSprite === 'takeHit' && this.health > 0) {
-                if (this.framesElapsed % 30 === 0 && this.framesCurrent === this.startFrame + this.framesMax - 1) {
-                    this.switchSprite('idle')
-                }
+                const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+                if (now < this.hitStunUntil) return
+                this.switchSprite('idle')
                 return
             }
 
-            if (this.isAttacking) {
-                this.switchSprite('attack')
+            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+            if (now < this.attackHoldUntil) {
+                this.switchSprite(this.attackSprite || 'attack')
+            } else if (this.isAttacking) {
+                this.switchSprite(this.attackSprite || 'attack')
             } else if (this.velocity.y < 0) {
                 this.switchSprite('jump')
             } else if (this.velocity.y > 0) {
@@ -220,6 +286,13 @@ export class Fighter {
 
     attack() {
         if (this.isCoolingDown || this.dead || this.isAttacking) return
+        if (this.sprites?.attack2) {
+            this.attackSprite = this.attackSprite === 'attack' ? 'attack2' : 'attack'
+        } else {
+            this.attackSprite = 'attack'
+        }
+        const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+        this.attackHoldUntil = now + 180
         this.isAttacking = true
         this.isCoolingDown = true
 
@@ -234,6 +307,8 @@ export class Fighter {
     takeHit() {
         this.health -= 10
         if (this.sprites?.takeHit) this.switchSprite('takeHit')
+        const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+        this.hitStunUntil = now + 320
         if (this.health <= 0) {
             this.health = 0
             this.dead = true
