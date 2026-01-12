@@ -51,7 +51,7 @@ export class Game {
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height)
 
         this.player1 = new Fighter({
-            position: { x: 150, y: 20 },
+            position: { x: 150, y: 30 },
             velocity: { x: 0, y: 0 },
             color: 'red',
             imageSrc: '/assets/michael_spritesheet.png',
@@ -65,14 +65,14 @@ export class Game {
                 fall: { row: 0, col: 0 },
                 attack: { row: 0, col: 1 },
                 attack2: { row: 1, col: 0 },
-                takeHit: { row: 1, col: 1, forceFlip: true }
+                takeHit: { row: 1, col: 1 }
             },
             context: this.context,
             offset: { x: 20, y: 0 }
         })
 
         this.player2 = new Fighter({
-            position: { x: 800, y: 20 },
+            position: { x: 800, y: 30 },
             velocity: { x: 0, y: 0 },
             color: 'blue',
             imageSrc: '/assets/chito_spritesheet.png',
@@ -86,7 +86,7 @@ export class Game {
                 fall: { row: 0, col: 0 },
                 attack: { row: 0, col: 1 },
                 attack2: { row: 1, col: 0 },
-                takeHit: { row: 1, col: 1, noFlip: true }
+                takeHit: { row: 1, col: 1 }
             },
             context: this.context,
             offset: { x: 20, y: 0 }
@@ -117,8 +117,8 @@ export class Game {
         this.player2.health = 100
         this.player1.dead = false
         this.player2.dead = false
-        this.player1.position = { x: 100, y: 20 }
-        this.player2.position = { x: 800, y: 20 }
+        this.player1.position = { x: 100, y: 30 }
+        this.player2.position = { x: 800, y: 30 }
         this.player1.framesCurrent = 0
         this.player2.framesCurrent = 0
 

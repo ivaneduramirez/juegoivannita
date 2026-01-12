@@ -14,6 +14,7 @@ canvas.height = 576
 
 // Initialize Game
 const game = new Game(canvas, c)
+window.__game = game
 
 // Start Screen Logic
 const startScreen = document.getElementById('startScreen')

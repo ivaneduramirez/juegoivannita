@@ -46,6 +46,8 @@ export class Fighter {
         this.attackSprite = 'attack'
         this.hitStunUntil = 0
         this.attackHoldUntil = 0
+        this.facingRight = true
+        this.hitFacingRight = null
 
         // Immediately trigger idle state setup if sprites exist
         if (this.sprites) {
@@ -109,7 +111,7 @@ export class Fighter {
                 const dr = r - bgColor.r
                 const dg = g - bgColor.g
                 const db = b - bgColor.b
-                return (dr * dr + dg * dg + db * db) < (60 * 60)
+                return (dr * dr + dg * dg + db * db) < (72 * 72)
             }
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i]
@@ -128,8 +130,8 @@ export class Fighter {
                     const db = b - bgColor.b
                     const dist2 = dr * dr + dg * dg + db * db
                     // Feather edge to reduce halos near background
-                    if (dist2 < (90 * 90)) {
-                        const alpha = Math.min(255, Math.max(0, (dist2 - (60 * 60)) / ((90 * 90) - (60 * 60)) * 255))
+                    if (dist2 < (110 * 110)) {
+                        const alpha = Math.min(255, Math.max(0, (dist2 - (72 * 72)) / ((110 * 110) - (72 * 72)) * 255))
                         data[i + 3] = Math.min(data[i + 3], alpha)
                     }
                 }
@@ -157,12 +159,16 @@ export class Fighter {
         const frameHeight = img.height / rows
 
         const facingRightDefault = !this.enemy || this.position.x < this.enemy.position.x
-        const spriteMeta = (this.sprites && this.currSprite) ? this.sprites[this.currSprite] : null
-        const noFlip = spriteMeta?.noFlip
-        const forceFlip = spriteMeta?.forceFlip
-        let shouldFlip = !facingRightDefault
-        if (noFlip) shouldFlip = false
-        if (forceFlip) shouldFlip = true
+        if (this.currSprite !== 'takeHit') {
+            this.facingRight = facingRightDefault
+        }
+        const facingRight = this.currSprite === 'takeHit' && this.hitFacingRight !== null
+            ? this.hitFacingRight
+            : facingRightDefault
+        let shouldFlip = !facingRight
+        if (this.currSprite === 'takeHit') {
+            shouldFlip = facingRightDefault
+        }
 
         this.context.save()
 
@@ -309,6 +315,7 @@ export class Fighter {
         if (this.sprites?.takeHit) this.switchSprite('takeHit')
         const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
         this.hitStunUntil = now + 320
+        this.hitFacingRight = this.facingRight
         if (this.health <= 0) {
             this.health = 0
             this.dead = true
@@ -321,6 +328,7 @@ export class Fighter {
         if (this.currSprite === name) return
 
         this.currSprite = name
+        if (name !== 'takeHit') this.hitFacingRight = null
         const s = this.sprites[name]
 
         this.frameY = s.row
